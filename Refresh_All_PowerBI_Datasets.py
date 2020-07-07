@@ -27,8 +27,9 @@ for group in groups:
     datasets_request = json.loads(requests.get(url=datasets_request_url, headers=header).content)
     datasets = [d['id'] for d in datasets_request['value']]
     for dataset in datasets:
-        if dataset!='9ea08f66-4f79-4b88-a236-e5c03e914d50': #escludo il report del 2019
+        if dataset!='97c114da-a51d-4313-8a01-f18e52f62c9b': #escludo il report del 2019
             refresh_url = 'https://api.powerbi.com/v1.0/myorg/groups/' + group + '/datasets/' + dataset + '/refreshes'
             r = requests.post(url=refresh_url, headers=header)
     time.sleep(420) #attendo 7 minuti prima di lanciare un altro group (area)
+    
 final = pandas.DataFrame()
