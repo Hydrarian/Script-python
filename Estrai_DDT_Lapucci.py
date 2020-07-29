@@ -16,7 +16,7 @@ import logging
 
 def contaRecord(cursor_):
     #conto quante righe ci sono nella lista filtrata
-    row_c = cursor_.execute("SELECT  COUNT(*) FROM   GAMMAtest.dbo.[1_Lapucci_FTCLI] where [DO11_NUMREG_CO99] not in (select [numreg] from [GAMMAtest].[dbo].[_APPO_LAPUCCI] where elab=0)")
+    row_c = cursor_.execute("SELECT  COUNT(*) FROM GAMMAtest.dbo.[1_Lapucci_FTCLI] where [DO11_NUMREG_CO99] in (select [numreg] from [GAMMAtest].[dbo].[_APPO_LAPUCCI] where elab=0)")
     row_count_ = str(cursor_.fetchall())
     charToDeleteInrow_count="[(,)] "
 
@@ -42,7 +42,7 @@ def main():
     row_count_tot = row_count
     print(str(row_count_tot)+' record da processare\n')
 
-    #finchè il count non mi restituisce la stringa [(0, )] (che si presenta quando non ci sono righe nella vista filtrata) esegue il ciclo:
+    #finchè il count non mi restituisce 0:
     while row_count!=0:
 
         #Eseguo la query:
@@ -65,12 +65,12 @@ def main():
         stringaDivisa = stringaIntera.split(", ")
         #print(stringaDivisa)
         row_count = contaRecord(cursor)
-        print("Rimanenti: "+str(row_count)+"su "+str(row_count_tot)+"| NumReg: " + nreg + "\n")
+        print("Rimanenti: "+str(row_count)+" su "+str(row_count_tot)+" | NumReg: " + nreg + "\n")
 
         #Ricavo il campo myPathName:
         stringa2ConSlash = stringaDivisa[1].replace('\\\\',"/")
         myPathName = stringa2ConSlash.replace("'","")
-        print("Path: " + myPathName + "\n")
+        #print("Path: " + myPathName + "\n")
 
         #ricavo il campo [myFileName]:
         stringa3SenzaApici = stringaDivisa[2].replace("'","")
@@ -83,10 +83,13 @@ def main():
         #Copio il file nella cartella temporanea
         shutil.copy(myPathName, nuovoPath)
 
-        print("Il file è stato copiato correttamente, cambio il flag su _APPO_LAPUCCI..."+'\n')
+        #print("Il file è stato copiato correttamente, cambio il flag su _APPO_LAPUCCI..."+'\n')
         #Inserisco l'elab nella tabella di appoggio
         cursor.execute("UPDATE [GAMMAtest].[dbo].[_APPO_LAPUCCI] SET [elab] =1 where [_APPO_LAPUCCI].[numreg] = ? ", nreg)
         cnxn.commit()
+
+        row_count = contaRecord(cursor)
+    print("========= FINE =========")
 
 if __name__ == '__main__':
     main()
