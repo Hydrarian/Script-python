@@ -1,16 +1,8 @@
-import tkinter as tk
-from tkinter import ttk
-from tkinter import *
 import sys
 import pyodbc
 import shutil
-import paramiko
 import time
-from babel.dates import format_date, parse_date, get_day_names, get_month_names
-from babel.numbers import *  # Additional Import
 from functools import partial
-from tkcalendar import Calendar
-import logging
     
 
 
@@ -35,7 +27,6 @@ def connettiSQL():
     return cnxn
 
 def main():
-
     cnxn = connettiSQL()
     cursor = cnxn.cursor()
     row_count = contaRecord(cursor)
@@ -59,34 +50,42 @@ def main():
         #print(nreg)
         row = cursor.execute("SELECT  top(1) [IdObject], [myPathName], [myFileName] FROM   GAMMAtest.dbo.[1_Lapucci_FTCLI] where isnull(NomeFilePerArchiva,'') <>''  and DO11_NUMREG_CO99 = ? order by [NumeroProtocollo], [myDataFileName] desc", nreg_)
         stringaIntera = str(cursor.fetchall())
+        if stringaIntera=="[]":  #se la stringa è vuota vuol dire che non c'è corrispondenza tra vista e tabella, quindi passo al prossimo numreg
+            #print(stringaIntera)
+            print(nreg+ " non presente in 1_Lapucci_FTCLI")
+            cursor.execute("UPDATE [GAMMAtest].[dbo].[_APPO_LAPUCCI] SET [elab] =1 where [_APPO_LAPUCCI].[numreg] = ? ", nreg)
+            cnxn.commit()
+            continue
+        else: 
+            #Divido il risultato della query nei campi corrispondenti:
+            #print(stringaIntera)
+            stringaDivisa = stringaIntera.split(", ")
+            #print(stringaDivisa)
+            #print(stringaDivisa)
+            row_count = contaRecord(cursor)
+            print("Rimanenti: "+str(row_count)+" su "+str(row_count_tot)+" | NumReg: " + nreg + "\n")
 
-        #Divido il risultato della query nei campi corrispondenti:
-        #print(stringaIntera)
-        stringaDivisa = stringaIntera.split(", ")
-        #print(stringaDivisa)
-        row_count = contaRecord(cursor)
-        print("Rimanenti: "+str(row_count)+" su "+str(row_count_tot)+" | NumReg: " + nreg + "\n")
+            #Ricavo il campo myPathName:
+            #print(stringaDivisa[1])
+            stringa2ConSlash = stringaDivisa[1].replace('\\\\',"/")
+            myPathName = stringa2ConSlash.replace("'","")
+            #print("Path: " + myPathName + "\n")
 
-        #Ricavo il campo myPathName:
-        stringa2ConSlash = stringaDivisa[1].replace('\\\\',"/")
-        myPathName = stringa2ConSlash.replace("'","")
-        #print("Path: " + myPathName + "\n")
+            #ricavo il campo [myFileName]:
+            stringa3SenzaApici = stringaDivisa[2].replace("'","")
+            myFileName = stringa3SenzaApici[:-2]
+            print("Nome: " + myFileName + "\n")
 
-        #ricavo il campo [myFileName]:
-        stringa3SenzaApici = stringaDivisa[2].replace("'","")
-        myFileName = stringa3SenzaApici[:-2]
-        print("Nome: " + myFileName + "\n")
+            #imposto il path temporaneo dove avverrà il renaming del file e rinomino il file:
+            nuovoPath = "C:/DDT_Lapucci/" + nreg + "_" + myFileName
+            
+            #Copio il file nella cartella temporanea
+            shutil.copy(myPathName, nuovoPath)
 
-        #imposto il path temporaneo dove avverrà il renaming del file e rinomino il file:
-        nuovoPath = "C:/DDT_Lapucci/" + myFileName
-        
-        #Copio il file nella cartella temporanea
-        shutil.copy(myPathName, nuovoPath)
-
-        #print("Il file è stato copiato correttamente, cambio il flag su _APPO_LAPUCCI..."+'\n')
-        #Inserisco l'elab nella tabella di appoggio
-        cursor.execute("UPDATE [GAMMAtest].[dbo].[_APPO_LAPUCCI] SET [elab] =1 where [_APPO_LAPUCCI].[numreg] = ? ", nreg)
-        cnxn.commit()
+            #print("Il file è stato copiato correttamente, cambio il flag su _APPO_LAPUCCI..."+'\n')
+            #Inserisco l'elab nella tabella di appoggio
+            cursor.execute("UPDATE [GAMMAtest].[dbo].[_APPO_LAPUCCI] SET [elab] =1 where [_APPO_LAPUCCI].[numreg] = ? ", nreg)
+            cnxn.commit()
 
         row_count = contaRecord(cursor)
     print("========= FINE =========")
